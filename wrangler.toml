@@ -1,15 +1,5 @@
 name = "petcare"
 compatibility_date = "2024-06-01"
 
-[build]
-command = "npm run build"
-cwd = "."
-watch_dir = "src"
-
-[[build.environment_variables]]
-NODE_VERSION = "18"
-
-[build.upload]
-format = "modules"
-dir = "./dist"
-main = "./dist/index.js"
+# Configuração para Cloudflare Pages
+pages_build_output_dir = "dist"
