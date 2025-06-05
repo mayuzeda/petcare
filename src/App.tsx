@@ -1,42 +1,38 @@
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import Dashboard from './pages/Dashboard'
+import Profile from './components/Profile'
+import Charts from './pages/Charts'
+import { PetProvider } from './contexts/PetContext'
+import PlaceholderPage from './components/PlaceholderPage'
+import CalendarPage from './components/CalendarPage'
+import ExamsPage from './components/ExamsPage'
+import AppointmentsPage from './components/AppointmentsPage'
+import AntiparasiticPage from './components/AntiparasiticPage'
+import GPSPage from './components/GPSPage'
+import DocumentsPage from './components/DocumentsPage'
+import ChatPage from './components/ChatPage'
+import CalendarReminder from './components/CalendarReminder'
+import { Toaster } from './components/ui/toaster'
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Emergency from "./pages/Emergency";
-import Profile from "./pages/Profile";
-import PlaceholderPage from "./components/PlaceholderPage";
-import NotFound from "./pages/NotFound";
-
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+function App() {
+  return (
+    <PetProvider>
+      <Router>
         <Routes>
-          <Route path="/" element={<Login />} />
+          <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/emergency" element={<Emergency />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/calendar" element={<PlaceholderPage />} />
+          <Route path="/charts" element={<Charts />} />          <Route path="/calendar" element={<CalendarPage />} />          <Route path="/exams" element={<ExamsPage />} />          <Route path="/appointments" element={<AppointmentsPage />} />
+          <Route path="/antiparasitic" element={<AntiparasiticPage />} />          <Route path="/gps" element={<GPSPage />} />          <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/messages" element={<PlaceholderPage />} />
-          <Route path="/documents" element={<PlaceholderPage />} />
-          <Route path="/courses" element={<PlaceholderPage />} />
-          <Route path="/map" element={<PlaceholderPage />} />
-          <Route path="/shop" element={<PlaceholderPage />} />
-          <Route path="/statistics" element={<PlaceholderPage />} />
-          <Route path="/settings" element={<PlaceholderPage />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="*" element={<Dashboard />} />
         </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      </Router>
+      <CalendarReminder />
+      <Toaster />
+    </PetProvider>
+  )
+}
 
-export default App;
+export default App

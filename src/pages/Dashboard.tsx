@@ -1,38 +1,36 @@
-
 import { useNavigate } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Header from "@/components/Header";
 import IconGrid from "@/components/IconGrid";
+import PetAvatars from "@/components/PetAvatars";
+import { usePet } from "@/contexts/PetContext";
+import UpcomingEventsWidget from "@/components/UpcomingEventsWidget";
+import ChatIcon from "@/components/ChatIcon";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const username = "John"; // In a real app, this would come from authentication state
+  const { selectedPet } = usePet();
 
   return (
-    <div className="app-container p-4">
-      <Header />
-      
-      <main className="flex-1">
-        <section className="my-6">
-          <h1 className="text-2xl font-bold">Welcome back, {username}!</h1>
-          <p className="text-gray-600 mt-1">What would you like to do today?</p>
-        </section>
-
-        <section className="my-8">
+    <div className="min-h-screen flex flex-col"> 
+      <PetAvatars />
+      <main className="flex-1 container mx-auto px-4 py-4">
+        <div className="mb-2">
+          <h1 className="text-2xl font-bold">Olá, esse é perfil de {selectedPet.name}</h1>
+          <p className="text-gray-600">O que você gostaria de acessar?</p>
+        </div>
+        
+        <section className="flex-1 mb-6">
           <IconGrid />
         </section>
-
-        <section className="my-8">
-          <Button 
-            variant="destructive" 
-            className="emergency-button"
-            onClick={() => navigate("/emergency")}
-          >
-            <Bell className="h-5 w-5" />
-            Emergency Call
-          </Button>
+          <section className="mb-20">
+          <UpcomingEventsWidget />
         </section>
+        
+        {/* Botão de chat flutuante */}
+        <div className="fixed bottom-6 right-6">
+          <ChatIcon className="h-14 w-14" />
+        </div>
       </main>
     </div>
   );
