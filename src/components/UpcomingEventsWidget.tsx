@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { usePet } from "@/contexts/PetContext";
-import { 
-  CalendarEvent, 
+import {
+  CalendarEvent,
   EventType,
-  eventColors, 
+  eventColors,
   getUpcomingEventsForPet,
   loadEvents
 } from "@/data/calendarEvents";
@@ -16,12 +16,12 @@ const UpcomingEventsWidget = () => {
   const { selectedPet } = usePet();
   const navigate = useNavigate();
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
-  
+
   useEffect(() => {
     const events = loadEvents();
     const petEvents = getUpcomingEventsForPet(events, selectedPet.id, 30);
     // Get just the first 3 events
-    setUpcomingEvents(petEvents.slice(0, 3));
+    setUpcomingEvents(petEvents.slice(0, 2));
   }, [selectedPet.id]);
   const formatEventDate = (eventDate: Date) => {
     if (isToday(eventDate)) {
@@ -32,27 +32,29 @@ const UpcomingEventsWidget = () => {
       return formatToBrazilianDate(eventDate);
     }
   };
-  
+
   if (upcomingEvents.length === 0) {
     return null;
   }
-  
+
   return (
-    <Card className="w-full">      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">Próximos Eventos</CardTitle>
-        <button 
+    <Card className="w-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium pb-4">
+          Próximos Eventos</CardTitle>
+        <button
           onClick={() => navigate('/calendar')}
-          className="text-xs text-primary flex items-center"
+          className="text-xs text-primary flex items-center pb-4"
         >
           Ver Todos <ChevronRight className="h-3 w-3" />
         </button>
       </CardHeader>
       <CardContent className="px-2">
-        <div className="space-y-3">
+        <div className="space-y-2">
           {upcomingEvents.map((event) => (
             <div
               key={event.id}
-              className="flex items-center p-2 hover:bg-muted/50 rounded-md transition-colors"
+              className="flex items-center p-1 hover:bg-muted/50 rounded-md transition-colors"
               onClick={() => navigate('/calendar')}
             >
               <div
@@ -69,11 +71,11 @@ const UpcomingEventsWidget = () => {
                 </div>
               </div>
               <div className="ml-2">
-                <span 
-                  className="text-xs px-2 py-1 rounded-full" 
-                  style={{ 
+                <span
+                  className="text-xs px-2 py-1 rounded-full"
+                  style={{
                     backgroundColor: `${eventColors[event.type as EventType]}20`,
-                    color: eventColors[event.type as EventType] 
+                    color: eventColors[event.type as EventType]
                   }}
                 >
                   {event.type}

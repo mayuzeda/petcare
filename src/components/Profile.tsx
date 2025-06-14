@@ -7,11 +7,10 @@ import { Label } from "@/components/ui/label"
 import { PetInfo } from "@/data/pets"
 import { usePet } from "@/contexts/PetContext"
 import PetLayout from "./PetLayout"
-import BackButton from "./BackButton"
 
 export default function Profile() {
   const { selectedPet } = usePet();
-  
+
   const [editing, setEditing] = useState<string | null>(null)
   const [petInfo, setPetInfo] = useState<PetInfo>(selectedPet.info)
 
@@ -47,7 +46,7 @@ export default function Profile() {
     return (
       <div className="flex items-center justify-between border-b border-blue-800 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md border border-blue-300 text-blue-300">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md  bg-orange-400 text-indigo-950">
             {getFieldIcon(field)}
           </div>
           <div>
@@ -56,7 +55,7 @@ export default function Profile() {
               <Input
                 value={petInfo[field]}
                 onChange={(e) => handleChange(field, e.target.value)}
-                className="mt-1 h-8 bg-blue-900 text-white"
+                className="mt-1 h-6 bg-blue-900 text-white border-none"
               />
             ) : (
               <p className="text-white">{petInfo[field]}</p>
@@ -77,34 +76,27 @@ export default function Profile() {
       </div>
     )
   }
-
   return (
-    <PetLayout>
-      <div className="mb-4 flex items-center">
-        <BackButton />
-      </div>
-      
-      <div className="container mx-auto p-4">
-        <Card className="w-full max-w-md mx-auto overflow-hidden rounded-3xl bg-blue-900 text-white shadow-xl">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="flex items-center space-x-4">
-              <img
-                src={selectedPet.image}
-                alt={selectedPet.name}
-                className="h-16 w-16 rounded-full object-cover"
-              />
-              <h2 className="text-2xl font-bold">{selectedPet.name}</h2>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {renderField("Tipo", "tipo")}
-            {renderField("Peso", "peso")}
-            {renderField("Idade", "idade")}
-            {renderField("Raça", "raca")}
-            {renderField("Coleira", "coleira")}
-          </CardContent>
-        </Card>
-      </div>
+    <PetLayout title={`Perfil de ${selectedPet.name}`}>
+      <Card className="w-full max-w-md mx-auto overflow-hidden rounded-xl bg-indigo-950 text-white shadow-xl">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="flex items-center space-x-4">
+            <img
+              src={selectedPet.image}
+              alt={selectedPet.name}
+              className="h-16 w-16 rounded-full object-cover"
+            />
+            <h2 className="text-2xl font-bold">{selectedPet.name}</h2>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {renderField("Tipo", "tipo")}
+          {renderField("Peso", "peso")}
+          {renderField("Idade", "idade")}
+          {renderField("Raça", "raca")}
+          {renderField("Coleira", "coleira")}
+        </CardContent>
+      </Card>
     </PetLayout>
   )
 }

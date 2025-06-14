@@ -31,7 +31,7 @@ import {
     getFileIcon
 } from "@/data/petDocuments";
 import BackButton from "@/components/BackButton";
-import PetAvatars from "@/components/PetAvatars";
+import { PetLayout } from "./PetLayout";
 
 const DocumentsPage = () => {
     const navigate = useNavigate();
@@ -178,7 +178,7 @@ const DocumentsPage = () => {
     const getDocumentIcon = (fileType: string) => {
         switch (fileType.toLowerCase()) {
             case 'pdf':
-                return <FileText className="h-6 w-6 text-red-500" />;
+                return <FileText className="h-6 w-6" />;
             case 'jpg':
             case 'jpeg':
             case 'png':
@@ -189,58 +189,53 @@ const DocumentsPage = () => {
         }
     };
 
-    return (
-        <div className="min-h-screen flex flex-col pb-20">
-            <header className="flex items-center justify-between p-3 bg-white shadow-sm">
-                <div className="flex items-center">
-                    <BackButton />
-                    <h1 className="text-lg font-bold ml-2">Documentos</h1>
-                </div>
-
-                <Button
-                    className="rounded-full"
-                    size="icon"
-                    onClick={handleUploadClick}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                />
-            </header>
-
-            {/* Pet Avatars Section */}
-            <div className="w-full bg-white shadow-sm py-2 border-t border-gray-100">
-                <PetAvatars showAddButton={false} />
-            </div>
-
-            <main className="flex-1 container mx-auto p-2 md:p-3">
-                {/* Banner com informações do pet */}
-                <div className="bg-white rounded-lg shadow p-3 mb-3">
-                    <div className="flex items-center gap-2">
+    // Floating Action Button para adicionar documento
+    const fabButton = (
+        <>
+            <Button
+                className="rounded-full w-14 h-14 bg-orange-500 hover:bg-orange-600 p-0 shadow-lg hover:shadow-xl transition-shadow"
+                size="lg"
+                onClick={handleUploadClick}
+            >
+                <Plus className="h-6 w-6" />
+            </Button>            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                className="hidden"
+                aria-label="Selecionar arquivo para upload"
+                onChange={handleFileSelect}
+            />
+        </>
+    );    return (
+        <PetLayout
+            title="Documentos"
+            floatingActionButton={fabButton}
+        >
+            {/* Container principal com altura fixa */}
+            <div className="flex flex-col h-full w-full max-w-4xl">
+                {/* Banner com informações do pet - altura fixa */}
+                <div className="bg-white rounded-lg shadow p-4 mb-4 flex-none">
+                    <div className="flex items-center gap-3">
                         <img
                             src={selectedPet.image}
                             alt={`${selectedPet.name} Avatar`}
-                            className="w-10 h-10 rounded-full object-cover"
+                            className="w-12 h-12 rounded-full object-cover"
                         />
                         <div>
-                            <h2 className="text-base font-semibold">
+                            <h2 className="text-lg font-semibold">
                                 Documentos de {selectedPet.name}
                             </h2>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-sm text-gray-500">
                                 {petDocuments.length} documentos registrados
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Barra de Pesquisa - só mostra quando não está na aba de adicionar */}
+                {/* Barra de Pesquisa - altura fixa */}
                 {activeCategory !== "adicionar" && (
-                    <div className="relative mb-3">
+                    <div className="relative mb-4 flex-none">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             type="text"
@@ -251,10 +246,11 @@ const DocumentsPage = () => {
                         />
                     </div>
                 )}
-                {/* Abas para categorias */}
-                <div className="flex items-center justify-between mb-3 w-full">
-                    <Tabs defaultValue="historico-geral" className="mb-3" value={activeCategory} onValueChange={(value) => setActiveCategory(value as any)}>
-                        <TabsList className="grid grid-cols-2 lg:grid-cols-6 gap-2 mb-2">
+
+                {/* Abas para categorias - altura fixa */}
+                <div className="mb-4 flex-none">
+                    <Tabs defaultValue="historico-geral" value={activeCategory} onValueChange={(value) => setActiveCategory(value as DocumentCategory | "historico-geral" | "adicionar")}>
+                        <TabsList className="grid grid-cols-5 gap-2">
                             <TabsTrigger value="vacinas" className="text-xs">Vacinas</TabsTrigger>
                             <TabsTrigger value="receitas" className="text-xs">Receitas</TabsTrigger>
                             <TabsTrigger value="exames" className="text-xs">Exames</TabsTrigger>
@@ -262,112 +258,111 @@ const DocumentsPage = () => {
                             <TabsTrigger value="historico-geral" className="text-xs">Todos</TabsTrigger>
                         </TabsList>
                     </Tabs>
-                    <Button onClick={handleUploadClick} className="flex gap-2 items-center">
-                        <PlusIcon className="h-4 w-4" />
-                        Adicionar Documento
-                    </Button>
                 </div>
 
-
-
-                {/* Área central para upload quando não há documentos (e não está na tab de adicionar) */}
-                {petDocuments.length === 0 && activeCategory !== "adicionar" && (
-                    <div className="flex flex-col items-center justify-center h-64 bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 p-6">
-                        <div className="bg-gray-100 rounded-full p-4 mb-4">
-                            <Upload className="h-10 w-10 text-gray-400" />
+                {/* Área de conteúdo com scroll - altura flexível */}
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                    {/* Área central para upload quando não há documentos */}
+                    {petDocuments.length === 0 && activeCategory !== "adicionar" && (
+                        <div className="flex flex-col items-center justify-center h-full bg-white rounded-lg shadow-sm border-2 border-dashed border-gray-300 p-6">
+                            <div className="bg-gray-100 rounded-full p-4 mb-4">
+                                <Upload className="h-10 w-10 text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-700 mb-1">Sem documentos</h3>
+                            <p className="text-sm text-gray-500 text-center mb-4">
+                                Adicione documentos para {selectedPet.name} clicando no botão abaixo
+                            </p>
+                            <Button onClick={handleUploadClick} className="flex gap-2 items-center">
+                                <Upload className="h-4 w-4" />
+                                Adicionar Documento
+                            </Button>
                         </div>
-                        <h3 className="text-lg font-medium text-gray-700 mb-1">Sem documentos</h3>
-                        <p className="text-sm text-gray-500 text-center mb-4">
-                            Adicione documentos para {selectedPet.name} clicando no botão abaixo
-                        </p>
-                        <Button onClick={handleUploadClick} className="flex gap-2 items-center">
-                            <Upload className="h-4 w-4" />
-                            Adicionar Documento
-                        </Button>
-                    </div>
-                )}
+                    )}
 
-                {/* Lista de documentos */}
-                {petDocuments.length > 0 && (
-                    <div className="grid grid-cols-1 gap-3">
-                        {petDocuments.map(doc => (
-                            <div
-                                key={doc.id}
-                                className="bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-200 p-3"
-                            >
-                                <div className="flex items-start gap-3">                  <div className={`p-3 rounded-lg bg-${doc.category === 'exames' ? 'blue' :
-                                    doc.category === 'vacinas' ? 'green' :
-                                        doc.category === 'receitas' ? 'purple' :
-                                            'gray'}-100`}
+                    {/* Lista de documentos */}
+                    {petDocuments.length > 0 && (
+                        <div className="grid grid-cols-1 gap-3 pb-4">
+                            {petDocuments.map(doc => (
+                                <div
+                                    key={doc.id}
+                                    className="bg-white rounded-lg shadow hover:shadow-md transition-shadow duration-200 p-3"
                                 >
-                                    {getDocumentIcon(doc.fileType)}
-                                </div>
+                                    <div className="flex items-start gap-3">
+                                        <div className={`p-3 rounded-lg flex-none ${
+                                            doc.category === 'exames' ? 'bg-blue-100 text-blue-700' :
+                                            doc.category === 'vacinas' ? 'bg-green-100 text-green-700' :
+                                            doc.category === 'receitas' ? 'bg-purple-100 text-purple-700' :
+                                            'bg-gray-100 text-gray-600'
+                                        }`}>
+                                            {getDocumentIcon(doc.fileType)}
+                                        </div>
 
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h3 className="font-medium text-gray-900">{doc.name}</h3>
-                                                <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                                                    <Badge
-                                                        variant="outline"
-                                                        className="text-xs px-2 py-0 font-normal"
-                                                        style={{
-                                                            color: documentColors[doc.category],
-                                                            borderColor: documentColors[doc.category],
-                                                        }}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-start">
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="font-medium text-gray-900 truncate">{doc.name}</h3>
+                                                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                                                        <Badge
+                                                            variant="outline"
+                                                            className="text-xs px-2 py-0 font-normal"
+                                                            style={{
+                                                                color: documentColors[doc.category],
+                                                                borderColor: documentColors[doc.category],
+                                                            }}
+                                                        >
+                                                            {documentCategories[doc.category]}
+                                                        </Badge>
+                                                        <span>•</span>
+                                                        <span>{doc.fileType.toUpperCase()}</span>
+                                                        <span>•</span>
+                                                        <span>{formatFileSize(doc.fileSize)}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-1 flex-none">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        onClick={() => handleToggleFavorite(doc.id)}
                                                     >
-                                                        {documentCategories[doc.category]}
-                                                    </Badge>
-                                                    <span>•</span>
-                                                    <span>{doc.fileType.toUpperCase()}</span>
-                                                    <span>•</span>
-                                                    <span>{formatFileSize(doc.fileSize)}</span>
+                                                        <Star
+                                                            className={`h-4 w-4 ${doc.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`}
+                                                        />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-red-500"
+                                                        onClick={() => handleRemoveDocument(doc.id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
                                             </div>
 
-                                            <div className="flex gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={() => handleToggleFavorite(doc.id)}
-                                                >
-                                                    <Star
-                                                        className={`h-4 w-4 ${doc.isFavorite ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`}
-                                                    />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-red-500"
-                                                    onClick={() => handleRemoveDocument(doc.id)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
+                                            {doc.notes && (
+                                                <p className="text-sm text-gray-500 mt-2 line-clamp-2">{doc.notes}</p>
+                                            )}
 
-                                        {doc.notes && (
-                                            <p className="text-sm text-gray-500 mt-2">{doc.notes}</p>
-                                        )}
-
-                                        <div className="flex items-center text-xs text-gray-500 mt-2">
-                                            <div className="flex items-center gap-1">
-                                                <CalendarIcon className="h-3.5 w-3.5" />
-                                                <span>{formatDate(doc.uploadDate)}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1 ml-3">
-                                                <Clock className="h-3.5 w-3.5" />
-                                                <span>{formatTime(doc.uploadDate)}</span>
+                                            <div className="flex items-center text-xs text-gray-500 mt-2">
+                                                <div className="flex items-center gap-1">
+                                                    <CalendarIcon className="h-3.5 w-3.5" />
+                                                    <span>{formatDate(doc.uploadDate)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1 ml-3">
+                                                    <Clock className="h-3.5 w-3.5" />
+                                                    <span>{formatTime(doc.uploadDate)}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </main>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Modal para metadados do documento */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -390,8 +385,10 @@ const DocumentsPage = () => {
                         </div>
 
                         <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>              
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
                             <select
+                                title="Selecionar categoria do documento"
+                                aria-label="Categoria do documento"
                                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm rounded-md"
                                 value={uploadingDocument.category}
                                 onChange={(e) => setUploadingDocument({
@@ -431,7 +428,8 @@ const DocumentsPage = () => {
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+
+        </PetLayout >
     );
 };
 

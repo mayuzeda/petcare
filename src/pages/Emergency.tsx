@@ -23,7 +23,7 @@ const Emergency = () => {
     <PetLayout>
       <div className="app-container">
         <header className="flex items-center py-4">
-          <BackButton />
+          
           <h2 className="font-semibold text-lg ml-2">Emergência</h2>
         </header>
         

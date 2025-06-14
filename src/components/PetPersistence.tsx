@@ -5,12 +5,12 @@ import { Pet } from '@/data/pets';
 // Componente para persistir dados dos pets no localStorage
 const PetPersistence = () => {
   const { pets } = usePet();
-  
+
   // Salva os pets no localStorage sempre que mudam
   useEffect(() => {
     localStorage.setItem('petcare-pets', JSON.stringify(pets));
   }, [pets]);
-  
+
   return null; // Componente não renderiza nada
 };
 

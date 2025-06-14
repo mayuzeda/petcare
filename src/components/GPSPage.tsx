@@ -1,60 +1,129 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePet } from "@/contexts/PetContext";
-import BackButton from "@/components/BackButton";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Footprints, MapPin, Timer, Home, Shrub, Car, AlertTriangle } from "lucide-react";
-import PetAvatars from "@/components/PetAvatars";
-import {
-    LineChart,
-    Line,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Legend,
-    Area
-} from "recharts";
-import { getPetGPSData, calculateGPSSummary, checkGPSAlerts, TimeRange } from "@/data/petGPS";
+import { MapPin, Navigation, Clock, Home, Car, TreePine, Building } from "lucide-react";
+import { PetLayout } from "./PetLayout";
+import { getPetGPSData, calculateGPSSummary, TimeRange } from "@/data/petGPS";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 
-// Cores para os gráficos
-const distanceColor = "#3b82f6"; // azul
-const stepsColor = "#10b981";    // verde
-const activeColor = "#8b5cf6";   // roxo
-const inactiveColor = "#d1d5db"; // cinza
+// Coordenadas do Parque Ibirapuera - São Paulo
+const SAO_PAULO_CENTER = { lat: -23.5872, lng: -46.6568 };
 
-// Cores para os locais
+// Localizações fictícias dos pets próximos ao Parque Ibirapuera
+const PET_LOCATIONS = {
+    1: { // Bella - cachorro caminhando no parque
+        lat: -23.5872,
+        lng: -46.6568,
+        address: "Parque Ibirapuera - Trilha das Árvores",
+        lastUpdate: new Date(Date.now() - 5 * 60 * 1000), // 5 minutos atrás
+        status: "moving" as const
+    },
+    2: { // Dom - gato em casa
+        lat: -23.5845,
+        lng: -46.6520,
+        address: "Rua Curitiba, 425 - Paraíso (Residência)",
+        lastUpdate: new Date(Date.now() - 12 * 60 * 1000), // 12 minutos atrás
+        status: "stationary" as const
+    },
+    3: { // Thor - cachorro caminhando no parque
+        lat: -23.5878,
+        lng: -46.6580,
+        address: "Parque Ibirapuera - Área de Recreação",
+        lastUpdate: new Date(Date.now() - 2 * 60 * 1000), // 2 minutos atrás
+        status: "moving" as const
+    }
+};
+
+// Componente para centralizar o mapa no pet
+const MapCenter: React.FC<{ position: [number, number] }> = ({ position }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        map.setView(position, 16);
+    }, [map, position]);
+
+    return null;
+};
+
+// Criar um ícone customizado para o pin do pet
+const createPetIcon = (petImage: string, status: string) => {
+    const statusColor = status === "moving" ? "#10b981" : "#f59e0b";
+
+    return L.divIcon({
+        html: `
+            <div style="
+                position: relative;
+                width: 40px;
+                height: 50px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            ">
+                <div style="
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    background-color: ${statusColor};
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: hidden;
+                ">
+                    <img src="${petImage}" alt="Pet" style="
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        border-radius: 50%;
+                    " />
+                </div>
+                <div style="
+                    width: 0;
+                    height: 0;
+                    border-left: 6px solid transparent;
+                    border-right: 6px solid transparent;
+                    border-top: 10px solid ${statusColor};
+                    margin-top: -2px;
+                "></div>
+            </div>
+        `,
+        className: 'custom-pet-marker',
+        iconSize: [40, 50],
+        iconAnchor: [20, 50],
+        popupAnchor: [0, -50]
+    });
+};
+
+// Cores para diferentes tipos de localização
 const locationColors: Record<string, string> = {
-    casa: "#4b5563",       // cinza escuro
-    quintal: "#10b981",    // verde
-    rua: "#3b82f6",        // azul
-    parque: "#8b5cf6",     // roxo
-    "casa+rua": "#60a5fa", // azul claro
-    misto: "#f59e0b"       // laranja
+    casa: "#10b981",      // verde
+    quintal: "#3b82f6",   // azul
+    rua: "#8b5cf6",       // roxo
+    parque: "#f59e0b",    // laranja
+    "casa+rua": "#ef4444", // vermelho
+    misto: "#6b7280"      // cinza
 };
 
 // Ícones para os locais
 const locationIcons: Record<string, JSX.Element> = {
-    casa: <Home size={14} />,
-    quintal: <Home size={14} />,
-    rua: <Car size={14} />,
-    parque: <Shrub size={14} />,
-    "casa+rua": <Car size={14} />,
-    misto: <MapPin size={14} />
+    casa: <Home size={16} />,
+    quintal: <Building size={16} />,
+    rua: <Car size={16} />,
+    parque: <TreePine size={16} />,
+    "casa+rua": <Navigation size={16} />,
+    misto: <MapPin size={16} />
 };
 
 const GPSPage = () => {
     const { selectedPet } = usePet();
     const [timeRange, setTimeRange] = useState<TimeRange>("day");
 
-    const gpsData = getPetGPSData(selectedPet.id, timeRange);
+    const petLocation = PET_LOCATIONS[selectedPet.id as keyof typeof PET_LOCATIONS];
     const summary = calculateGPSSummary(selectedPet.id, timeRange);
-    const alerts = checkGPSAlerts(selectedPet.id, timeRange);
 
     const handleTimeRangeChange = (value: string) => {
         if (value) {
@@ -62,122 +131,37 @@ const GPSPage = () => {
         }
     };
 
-    // Determinar o label do eixo X baseado no intervalo de tempo
-    const getXAxisLabel = () => {
-        switch (timeRange) {
-            case "day":
-                return "hour";
-            case "week":
-                return "day";
-            case "month":
-                return "date";
-            default:
-                return "hour";
+    const formatLastUpdate = (date: Date) => {
+        const now = new Date();
+        const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+
+        if (diffMinutes < 1) return "Agora mesmo";
+        if (diffMinutes === 1) return "1 minuto atrás";
+        if (diffMinutes < 60) return `${diffMinutes} minutos atrás`;
+
+        const diffHours = Math.floor(diffMinutes / 60);
+        if (diffHours === 1) return "1 hora atrás";
+        return `${diffHours} horas atrás`;
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case "moving": return "bg-green-500";
+            case "stationary": return "bg-yellow-500";
+            default: return "bg-gray-500";
         }
     };
 
-    // Formatar valores de distância
-    const formatDistance = (value: number) => {
-        return value >= 1000
-            ? `${(value / 1000).toFixed(1)} km`
-            : `${value} m`;
-    };
-
-    // Formatar valores de tempo
-    const formatTime = (minutes: number) => {
-        const hours = Math.floor(minutes / 60);
-        const mins = minutes % 60;
-
-        if (hours > 0) {
-            return `${hours}h ${mins}min`;
+    const getStatusText = (status: string) => {
+        switch (status) {
+            case "moving": return "Em movimento";
+            case "stationary": return "Parado";
+            default: return "Desconhecido";
         }
-        return `${mins} min`;
     };
 
-    // Dados de localização para exibição
-    const locationData = summary.locationCount.map(item => ({
-        name: item.location,
-        value: item.percentage,
-        count: item.count
-    }));
-
-    // Customizar o conteúdo do tooltip
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="bg-white p-4 border rounded-md shadow-lg">
-                    <p className="font-bold text-gray-800 mb-2 border-b pb-1">
-                        {timeRange === 'day' ? `Hora: ${label}` :
-                            timeRange === 'week' ? `Dia: ${label}` :
-                                `Data: ${label}`}
-                    </p>
-                    <div className="space-y-2">
-                        {payload.map((entry: any, index: number) => (
-                            <div
-                                key={`item-${index}`}
-                                className="flex items-center gap-2"
-                            >
-                                <div
-                                    className="h-3 w-3 rounded-full"
-                                    style={{ backgroundColor: entry.color }}
-                                ></div>
-                                <span className="font-semibold">
-                                    {entry.name === "distance"
-                                        ? "Distância: "
-                                        : entry.name === "steps"
-                                            ? "Passos: "
-                                            : entry.name === "active"
-                                                ? "Tempo Ativo: "
-                                                : entry.name === "inactive"
-                                                    ? "Tempo Inativo: "
-                                                    : `${entry.name}: `}
-                                </span>
-                                <span className="text-gray-700">
-                                    {entry.name === "distance"
-                                        ? formatDistance(entry.value)
-                                        : entry.name === "steps"
-                                            ? entry.value.toLocaleString()
-                                            : entry.name === "active" || entry.name === "inactive"
-                                                ? formatTime(entry.value)
-                                                : entry.value}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                    {/* Informação adicional personalizada sobre o pet */}
-                    {timeRange === 'day' &&
-                        <p className="mt-2 pt-2 text-xs text-gray-500 border-t">
-                            {label.startsWith("07") || label.startsWith("08") || label.startsWith("17") || label.startsWith("18")
-                                ? `Horários de maior atividade para ${selectedPet.name}`
-                                : label.startsWith("00") || label.startsWith("01") || label.startsWith("02") || label.startsWith("03") || label.startsWith("04")
-                                    ? `${selectedPet.name} normalmente descansa neste horário`
-                                    : `Monitoramento de ${selectedPet.name}`}
-                        </p>
-                    }
-                </div>
-            );
-        }
-        return null;
-    };
-
-    // Renderização condicional para nome do local
+    // Renderização do nome do local personalizado
     const renderLocationName = (location: string) => {
-        // Para modo mensal, substituir "misto" por uma descrição mais específica
-        if (location === "misto") {
-            if (timeRange === "month") {
-                if (selectedPet.id === 1) {
-                    return "Múltiplos Ambientes"; // Bella visita todos os locais
-                } else if (selectedPet.id === 3) {
-                    return "Ambientes Diversos"; // Thor vai a todos os locais
-                } else {
-                    return "Ambiente Doméstico"; // Dom (gato) fica só em casa
-                }
-            } else {
-                return "Locais Variados";
-            }
-        }
-
-        // Personalizar nomes para diferentes pets
         if (selectedPet.id === 1) { // Bella
             switch (location) {
                 case "casa": return "Interior da Casa";
@@ -193,7 +177,7 @@ const GPSPage = () => {
                 case "quintal": return "Varanda/Quintal";
                 default: return location;
             }
-        } else { // Thor ou outro pet
+        } else { // Thor
             switch (location) {
                 case "casa": return "Área Interna";
                 case "quintal": return "Quintal/Jardim";
@@ -206,24 +190,96 @@ const GPSPage = () => {
     };
 
     return (
-        <div className="min-h-screen flex flex-col pb-20">
-            <header className="flex items-center justify-between p-3 bg-white shadow-sm">
-                <div className="flex items-center">
-                    <BackButton />
-                    <h1 className="text-lg font-bold ml-2">GPS</h1>
-                </div>
-            </header>
-            
-            {/* Pet Avatars Section */}
-            <div className="w-full bg-white shadow-sm py-2 border-t border-gray-100">
-                <PetAvatars showAddButton={false} />
-            </div>
-            
-            <main className="flex-1 container mx-auto p-2 md:p-3">
-                <div className="mb-4">
-                    <ToggleGroup type="single" value={timeRange} onValueChange={handleTimeRangeChange} className="bg-gray-100 p-1 rounded-lg flex justify-center">
+        <PetLayout
+            title={`GPS - ${selectedPet.name}`}
+            showBackButton={true}
+        >
+            <div className="w-full max-w-4xl space-y-6">
+                {/* Status atual do pet */}
+                <Card className="shadow-md">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2">
+                            <MapPin className="h-5 w-5 text-blue-600" />
+                            Localização Atual
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className={`w-3 h-3 rounded-full ${getStatusColor(petLocation.status)} animate-pulse`}></div>
+                                    <span className="font-semibold text-lg">{selectedPet.name}</span>
+                                    <Badge variant="outline" className="text-xs">
+                                        {getStatusText(petLocation.status)}
+                                    </Badge>
+                                </div>
+                                <p className="text-gray-700 mb-1">{petLocation.address}</p>
+                                <div className="flex items-center gap-1 text-sm text-gray-500">
+                                    <Clock className="h-4 w-4" />
+                                    <span>Última atualização: {formatLastUpdate(petLocation.lastUpdate)}</span>
+                                </div>
+                            </div>
+                            <div className="text-right text-sm text-gray-500">
+                                <p>Lat: {petLocation.lat.toFixed(4)}</p>
+                                <p>Lng: {petLocation.lng.toFixed(4)}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>                {/* Mapa */}
+                <Card className="shadow-md">
+                    <CardHeader className="pb-4">                        <CardTitle className="flex items-center gap-2">
+                            <Navigation className="h-5 w-5 text-blue-600" />
+                            Mapa - Parque Ibirapuera
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="relative rounded-lg overflow-hidden h-80">
+                            <MapContainer
+                                center={[petLocation.lat, petLocation.lng]}
+                                zoom={16}
+                                className="w-full h-full"
+                                zoomControl={true}
+                                attributionControl={false}
+                            >
+                                <TileLayer
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                />
+                                <MapCenter position={[petLocation.lat, petLocation.lng]} />
+                                <Marker
+                                    position={[petLocation.lat, petLocation.lng]}
+                                    icon={createPetIcon(selectedPet.image, petLocation.status)}
+                                >
+                                    <Popup>
+                                        <div className="text-center p-2">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <img
+                                                    src={selectedPet.image}
+                                                    alt={selectedPet.name}
+                                                    className="w-8 h-8 rounded-full object-cover"
+                                                />
+                                                <div>
+                                                    <p className="font-semibold text-sm">{selectedPet.name}</p>
+                                                    <p className="text-xs text-gray-600">{getStatusText(petLocation.status)}</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-gray-700 mb-1">{petLocation.address}</p>
+                                            <p className="text-xs text-gray-500">
+                                                Última atualização: {formatLastUpdate(petLocation.lastUpdate)}
+                                            </p>
+                                        </div>
+                                    </Popup>
+                                </Marker>
+                            </MapContainer>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Seletor de período */}
+                <div className="flex justify-center">
+                    <ToggleGroup type="single" value={timeRange} onValueChange={handleTimeRangeChange} className="p-1 rounded-lg">
                         <ToggleGroupItem value="day" aria-label="Toggle day" className="data-[state=on]:bg-white data-[state=on]:shadow-sm">
-                            <span className="px-2">Dia</span>
+                            <span className="px-2">Hoje</span>
                         </ToggleGroupItem>
                         <ToggleGroupItem value="week" aria-label="Toggle week" className="data-[state=on]:bg-white data-[state=on]:shadow-sm">
                             <span className="px-2">Semana</span>
@@ -233,609 +289,78 @@ const GPSPage = () => {
                         </ToggleGroupItem>
                     </ToggleGroup>
                 </div>
-                
-                <div className="mb-4">
-                    {alerts.hasAlerts && (
-                        <Alert variant="destructive" className="mb-6 border-l-4 border-l-red-600 animate-fadeIn">
-                            <div className="flex items-start gap-3">
-                                <AlertTriangle className="h-6 w-6 text-red-600 mt-1" />
-                                <div>
-                                    <AlertTitle className="text-lg font-bold text-red-600">
-                                        Alerta de Atividade - {selectedPet.name}
-                                    </AlertTitle>
-                                    <AlertDescription className="mt-2 text-gray-700">
-                                        {alerts.alerts.map((alert, index) => (
-                                            <div key={index} className="py-1">
-                                                • {alert}
-                                            </div>
-                                        ))}
-                                    </AlertDescription>
-                                    <div className="mt-2 text-sm text-red-600">
-                                        {summary.activityLevel === "BAIXO"
-                                            ? "Recomendamos aumentar o nível de atividade física do seu pet."
-                                            : "Monitore estes alertas para garantir a saúde do seu pet."}
-                                    </div>
-                                </div>
-                            </div>
-                        </Alert>
-                    )}
-                </div>
-                
-                {/* Resumo de atividades */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 staggered-animation">
-                    <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 border-b-4 border-b-blue-400 animate-fadeIn opacity-0">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Distância Total</p>
-                                    <p className="text-3xl font-bold text-blue-600">{formatDistance(summary.totalDistance)}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {timeRange === 'day'
-                                            ? `${selectedPet.info.tipo.toLowerCase() === 'cachorro' ? 'Diário recomendado' : 'Movimentação'}: ${selectedPet.info.tipo.toLowerCase() === 'cachorro' ? '2-5 km' : '100-500m'}`
-                                            : `${timeRange === 'week' ? 'Semanal' : 'Mensal'}`}
-                                    </p>
-                                </div>
-                                <div className="h-14 w-14 rounded-full bg-blue-100 flex items-center justify-center shadow-inner">
-                                    <MapPin className="h-8 w-8 text-blue-600" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 border-b-4 border-b-green-400 animate-fadeIn opacity-0">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Total de Passos</p>
-                                    <p className="text-3xl font-bold text-green-600">{summary.totalSteps.toLocaleString()}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {selectedPet.info.tipo.toLowerCase() === 'cachorro'
-                                            ? `Meta: ${selectedPet.info.raca.toLowerCase().includes('pequeno') ? '8-10k' : selectedPet.info.raca.toLowerCase().includes('médio') ? '10-12k' : '12-15k'} passos`
-                                            : 'Gatos têm padrões de atividade diferentes'}
-                                    </p>
-                                </div>
-                                <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center shadow-inner">
-                                    <Footprints className="h-8 w-8 text-green-600" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 border-b-4 border-b-purple-400 animate-fadeIn opacity-0">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Tempo Ativo</p>
-                                    <p className="text-3xl font-bold text-purple-600">{formatTime(summary.totalActiveTime)}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        vs. {formatTime(summary.totalInactiveTime)} inativo
-                                        <span className="block">
-                                            {Math.round((summary.totalActiveTime / (summary.totalActiveTime + summary.totalInactiveTime)) * 100)}% do tempo
-                                        </span>
-                                    </p>
-                                </div>
-                                <div className="h-14 w-14 rounded-full bg-purple-100 flex items-center justify-center shadow-inner">
-                                    <Timer className="h-8 w-8 text-purple-600" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className={`shadow-md hover:shadow-lg transition-shadow duration-300 border-b-4 animate-fadeIn opacity-0 ${summary.activityLevel === "ALTO" ? "border-b-blue-400" :
-                        summary.activityLevel === "MODERADO" ? "border-b-green-400" :
-                            "border-b-amber-400"
-                        }`}>
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm font-medium text-muted-foreground">Nível de Atividade</p>
-                                    <div className="flex items-center">
-                                        <p className={`text-3xl font-bold ${summary.activityLevel === "ALTO" ? "text-blue-600" :
-                                            summary.activityLevel === "MODERADO" ? "text-green-600" :
-                                                "text-amber-600"
-                                            }`}>{summary.activePercentage}%</p>
-                                        <Badge
-                                            variant={summary.activityLevel === "BAIXO" ? "destructive" : "default"}
-                                            className={`ml-2 ${summary.activityLevel === "ALTO" ? "bg-blue-500" :
-                                                summary.activityLevel === "MODERADO" ? "bg-green-500" : ""
-                                                }`}
-                                        >
-                                            {summary.activityLevel}
-                                        </Badge>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {summary.activityLevel === "ALTO"
-                                            ? "Excelente nível de atividade!"
-                                            : summary.activityLevel === "MODERADO"
-                                                ? "Bom nível, pode melhorar"
-                                                : "Precisa de mais exercícios"}
-                                    </p>
-                                </div>
-                                <div className={`h-14 w-14 rounded-full flex items-center justify-center shadow-inner ${summary.activityLevel === "ALTO" ? "bg-blue-100" :
-                                    summary.activityLevel === "MODERADO" ? "bg-green-100" :
-                                        "bg-amber-100"
-                                    }`}>
-                                    {summary.activityLevel === "ALTO" ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={summary.activityLevel === "ALTO" ? "text-blue-600" : summary.activityLevel === "MODERADO" ? "text-green-600" : "text-amber-600"}>
-                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                                        </svg>
-                                    ) : summary.activityLevel === "MODERADO" ? (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                                            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
-                                            <path d="M8 12h8"></path>
-                                        </svg>
-                                    ) : (
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
-                                            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
-                                            <path d="m15 9-6 6"></path>
-                                            <path d="m9 9 6 6"></path>
-                                        </svg>
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Gráfico de Distância */}
-                <div className="grid grid-cols-1 gap-6 mb-6">
-                    <Card className="overflow-hidden border-2 border-opacity-50 animate-slideIn opacity-0" style={{ borderColor: distanceColor, animationDelay: '0.2s' }}>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2">
-                                <span className="h-4 w-4 rounded-full" style={{ backgroundColor: distanceColor }}></span>
-                                Distância Percorrida
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                {timeRange === 'day'
-                                    ? `Rastreamento da distância percorrida por ${selectedPet.name} nas últimas 24 horas`
-                                    : timeRange === 'week'
-                                        ? `Distância semanal percorrida por ${selectedPet.name}`
-                                        : `Resumo mensal da distância percorrida por ${selectedPet.name}`}
-                            </p>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-[280px] chart-container">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart
-                                        data={gpsData}
-                                        margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
-                                    >
-                                        <defs>
-                                            <linearGradient id="distanceGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor={distanceColor} stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor={distanceColor} stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
-                                        <XAxis
-                                            dataKey={getXAxisLabel()}
-                                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                                            tickMargin={10}
-                                            axisLine={{ stroke: '#e5e7eb' }}
-                                            tickLine={{ stroke: '#e5e7eb' }}
-                                        />
-                                        <YAxis
-                                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                                            tickMargin={10}
-                                            tickFormatter={(value) => formatDistance(value)}
-                                            axisLine={{ stroke: '#e5e7eb' }}
-                                            tickLine={{ stroke: '#e5e7eb' }}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Line
-                                            type="monotoneX"
-                                            dataKey="distance"
-                                            stroke={distanceColor}
-                                            strokeWidth={3}
-                                            dot={{ r: 2, fill: distanceColor, strokeWidth: 2 }}
-                                            activeDot={{ r: 6, strokeWidth: 0 }}
-                                            name="Distância"
-                                            isAnimationActive={true}
-                                            animationDuration={1000}
-                                        />
-                                        <Area
-                                            type="monotoneX"
-                                            dataKey="distance"
-                                            stroke="none"
-                                            fill="url(#distanceGradient)"
-                                            fillOpacity={1}
-                                            isAnimationActive={true}
-                                            animationDuration={1500}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="mt-2 text-center text-sm text-muted-foreground">
-                                <p>Total: <span className="font-semibold" style={{ color: distanceColor }}>{formatDistance(summary.totalDistance)}</span></p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Gráficos de Passos e Tempo Ativo/Inativo */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    {/* Gráfico de Passos */}
-                    <Card className="overflow-hidden border-2 border-opacity-50 animate-slideIn opacity-0" style={{ borderColor: stepsColor, animationDelay: '0.3s' }}>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2">
-                                <span className="h-4 w-4 rounded-full" style={{ backgroundColor: stepsColor }}></span>
-                                Passos
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                {timeRange === 'day'
-                                    ? `Contagem de passos de ${selectedPet.name} durante o dia`
-                                    : timeRange === 'week'
-                                        ? `Passos diários de ${selectedPet.name} na semana`
-                                        : `Atividade mensal registrada para ${selectedPet.name}`}
-                            </p>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-[250px] chart-container">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart
-                                        data={gpsData}
-                                        margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
-                                        barCategoryGap={4}
-                                    >
-                                        <defs>
-                                            <linearGradient id="stepsGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor={stepsColor} stopOpacity={0.8} />
-                                                <stop offset="100%" stopColor={stepsColor} stopOpacity={0.3} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} horizontal={true} vertical={false} />
-                                        <XAxis
-                                            dataKey={getXAxisLabel()}
-                                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                                            tickMargin={10}
-                                            axisLine={{ stroke: '#e5e7eb' }}
-                                            tickLine={{ stroke: '#e5e7eb' }}
-                                        />
-                                        <YAxis
-                                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                                            tickMargin={10}
-                                            tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
-                                            axisLine={{ stroke: '#e5e7eb' }}
-                                            tickLine={{ stroke: '#e5e7eb' }}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Bar
-                                            dataKey="steps"
-                                            name="Passos"
-                                            fill="url(#stepsGradient)"
-                                            radius={[4, 4, 0, 0]}
-                                            isAnimationActive={true}
-                                            animationDuration={800}
-                                            animationBegin={300}
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="mt-2 text-center text-sm text-muted-foreground">
-                                <p>Total: <span className="font-semibold" style={{ color: stepsColor }}>{summary.totalSteps.toLocaleString()} passos</span></p>
-                                <p className="text-xs mt-1">
-                                    {selectedPet.info.tipo.toLowerCase() === "cachorro" ?
-                                        `Recomendação diária: ${selectedPet.info.raca.toLowerCase().includes('pequeno') ? '8.000-10.000' :
-                                            selectedPet.info.raca.toLowerCase().includes('médio') ? '10.000-12.000' : '12.000-15.000'} passos` :
-                                        `Média de ${Math.round(summary.totalSteps / (timeRange === "day" ? 1 : timeRange === "week" ? 7 : 30)).toLocaleString()} passos ${timeRange === "day" ? "hoje" : timeRange === "week" ? "por dia nesta semana" : "diários neste mês"}`}
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Gráfico de Tempo Ativo/Inativo */}
-                    <Card className="overflow-hidden border-2 border-opacity-50 animate-slideIn opacity-0" style={{ borderColor: activeColor, animationDelay: '0.4s' }}>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center">
-                                        <span className="h-4 w-4 rounded-full mr-1" style={{ backgroundColor: activeColor }}></span>
-                                        <span className="mr-2 text-sm">Ativo</span>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <span className="h-4 w-4 rounded-full mr-1" style={{ backgroundColor: inactiveColor }}></span>
-                                        <span className="text-sm">Inativo</span>
-                                    </div>
-                                </div>
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                Proporção entre tempo ativo e inativo de {selectedPet.name}
-                            </p>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="h-[250px] chart-container">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart
-                                        data={gpsData}
-                                        margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
-                                        stackOffset="expand"
-                                        barSize={timeRange === 'day' ? 15 : timeRange === 'week' ? 30 : 50}
-                                        barGap={4}
-                                    >
-                                        <defs>
-                                            <linearGradient id="activeGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor={activeColor} stopOpacity={0.9} />
-                                                <stop offset="100%" stopColor={activeColor} stopOpacity={0.7} />
-                                            </linearGradient>
-                                            <linearGradient id="inactiveGradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor={inactiveColor} stopOpacity={0.8} />
-                                                <stop offset="100%" stopColor={inactiveColor} stopOpacity={0.5} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} horizontal={true} vertical={false} />
-                                        <XAxis
-                                            dataKey={getXAxisLabel()}
-                                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                                            tickMargin={10}
-                                            axisLine={{ stroke: '#e5e7eb' }}
-                                            tickLine={{ stroke: '#e5e7eb' }}
-                                        />
-                                        <YAxis
-                                            tickFormatter={(value) => `${Math.round(value * 100)}%`}
-                                            tick={{ fontSize: 12, fill: '#6b7280' }}
-                                            tickMargin={10}
-                                            axisLine={{ stroke: '#e5e7eb' }}
-                                            tickLine={{ stroke: '#e5e7eb' }}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend
-                                            iconType="circle"
-                                            iconSize={10}
-                                            formatter={(value) => <span className="text-sm font-medium">{value}</span>}
-                                            wrapperStyle={{ paddingTop: 10 }}
-                                        />
-                                        <Bar
-                                            stackId="time"
-                                            name="Tempo Ativo"
-                                            dataKey="active"
-                                            fill="url(#activeGradient)"
-                                            isAnimationActive={true}
-                                            animationDuration={800}
-                                            animationBegin={300}
-                                            radius={[0, 0, 0, 0]}
-                                        />
-                                        <Bar
-                                            stackId="time"
-                                            name="Tempo Inativo"
-                                            dataKey="inactive"
-                                            fill="url(#inactiveGradient)"
-                                            isAnimationActive={true}
-                                            animationDuration={800}
-                                            animationBegin={300}
-                                            radius={[0, 0, 0, 0]}
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="mt-2 text-center text-sm text-muted-foreground">
-                                <div className="flex justify-center items-center gap-4">
-                                    <p>Ativo: <span className="font-semibold" style={{ color: activeColor }}>{formatTime(summary.totalActiveTime)}</span></p>
-                                    <p>Inativo: <span className="font-semibold" style={{ color: inactiveColor }}>{formatTime(summary.totalInactiveTime)}</span></p>
-                                </div>
-                                <p className="text-xs mt-2">
-                                    {summary.activityLevel === "ALTO"
-                                        ? `Excelente! ${selectedPet.name} está com ótimo nível de atividade (${summary.activePercentage}%)`
-                                        : summary.activityLevel === "MODERADO"
-                                            ? `Boa atividade - ${selectedPet.name} está com nível moderado (${summary.activePercentage}%)`
-                                            : `${selectedPet.name} poderia se beneficiar de mais atividade física (${summary.activePercentage}%)`
-                                    }
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
 
                 {/* Distribuição de Locais */}
-                <div className="mb-6">
-                    <Card className="animate-slideIn opacity-0 shadow-md hover:shadow-lg transition-shadow duration-300 border-l-4" style={{ animationDelay: '0.5s', borderLeftColor: locationColors[summary.locationCount[0]?.location || 'casa'] }}>
-                        <CardHeader className="pb-3 border-b">
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <MapPin className="h-5 w-5 text-gray-700" />
-                                {selectedPet.info.tipo.toLowerCase() === "cachorro"
-                                    ? `Onde ${selectedPet.name} esteve ${timeRange === 'day' ? 'hoje' : timeRange === 'week' ? 'nesta semana' : 'neste mês'}`
-                                    : `Localização de ${selectedPet.name} ${timeRange === 'day' ? 'hoje' : timeRange === 'week' ? 'nesta semana' : 'neste mês'}`
-                                }
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                {selectedPet.info.tipo.toLowerCase() === "cachorro"
-                                    ? `Rastreamento de locais frequentados por ${selectedPet.name} - Entenda onde seu pet passa mais tempo`
-                                    : `Áreas da casa frequentadas por ${selectedPet.name} - Conheça melhor os hábitos do seu gato`
-                                }
-                            </p>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 gap-4">
-                                <div className="flex flex-col justify-center">
-                                    <div className="bg-gray-50 p-4 rounded-lg mb-4 border-l-4" style={{ borderLeftColor: locationColors[summary.locationCount[0]?.location || 'casa'] }}>
-                                        <h3 className="text-lg font-semibold mb-1">
-                                            {selectedPet.name} {timeRange === 'day' ? 'passou o dia' : timeRange === 'week' ? 'passou a semana' : 'passou o mês'} principalmente em:
-                                        </h3>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            {summary.locationCount.length > 0 ? (
-                                                <>
-                                                    <div className="h-5 w-5 rounded-full flex items-center justify-center" style={{ backgroundColor: locationColors[summary.locationCount[0].location] }}>
-                                                        {locationIcons[summary.locationCount[0].location]}
-                                                    </div>
-                                                    <span className="font-medium">{renderLocationName(summary.locationCount[0].location)}</span>
-                                                    <Badge variant="outline" style={{ backgroundColor: `${locationColors[summary.locationCount[0].location]}22` }}>
-                                                        {summary.locationCount[0].percentage}% do tempo
-                                                    </Badge>
-                                                </>
-                                            ) : (
-                                                "Sem dados de localização disponíveis"
-                                            )}
+                <Card className="shadow-md">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2">
+                            <MapPin className="h-5 w-5 text-gray-700" />
+                            Locais Frequentados
+                            <Badge variant="outline" className="ml-2">
+                                {timeRange === 'day' ? 'Hoje' : timeRange === 'week' ? 'Esta Semana' : 'Este Mês'}
+                            </Badge>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {summary.locationCount.map((location, index) => (
+                                <div key={location.location} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center gap-3">                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100">
+                                        <span className="text-gray-600">
+                                            {locationIcons[location.location]}
+                                        </span>
+                                    </div>
+                                        <div>
+                                            <p className="font-medium text-gray-900">
+                                                {renderLocationName(location.location)}
+                                            </p>
+                                            <p className="text-sm text-gray-500">
+                                                {location.count} {location.count === 1 ? 'registro' : 'registros'}
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className="space-y-3 mt-2 animate-scaleIn opacity-0" style={{ animationDelay: '0.5s' }}>
-                                        {summary.locationCount.map((location, index) => (
+                                    <div className="text-right">                    <p className="font-semibold text-lg text-blue-600">
+                                        {location.percentage}%
+                                    </p>
+                                        <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                                             <div
-                                                key={index}
-                                                className="flex items-center gap-3 p-3 rounded-md hover:bg-gray-50 transition-colors border border-gray-100 hover:border-gray-200"
-                                                style={{ animationDelay: `${0.5 + (index * 0.1)}s` }}
-                                            >
-                                                <div
-                                                    className="h-12 w-12 rounded-full flex items-center justify-center shadow-md"
-                                                    style={{
-                                                        backgroundColor: locationColors[location.location] || '#777777',
-                                                    }}
-                                                >
-                                                    {locationIcons[location.location] || <MapPin size={16} color="#ffffff" />}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex justify-between items-start">
-                                                        <p className="font-medium">{renderLocationName(location.location)}</p>
-                                                        <Badge
-                                                            className="ml-2"
-                                                            variant="outline"
-                                                            style={{ backgroundColor: `${locationColors[location.location]}22` }}
-                                                        >
-                                                            {location.percentage}%
-                                                        </Badge>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2 mt-2">
-                                                        <div className="w-full bg-gray-200 rounded-full h-2">
-                                                            <div
-                                                                className="h-2 rounded-full"
-                                                                style={{
-                                                                    width: `${location.percentage}%`,
-                                                                    backgroundColor: locationColors[location.location] || '#777777'
-                                                                }}
-                                                            ></div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex justify-between items-center mt-1">
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {timeRange === 'day' ? `${location.count} ${location.count > 1 ? 'horas' : 'hora'}` :
-                                                                timeRange === 'week' ? `${location.count} ${location.count > 1 ? 'dias' : 'dia'}` :
-                                                                    `${location.count} ${location.count > 1 ? 'semanas' : 'semana'}`}
-                                                        </p>
-
-                                                        {index === 0 && (
-                                                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-                                                                Mais frequente
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                                className="h-full rounded-full transition-all duration-300 bg-blue-500"
+                                            ></div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
 
-                {/* Informações específicas baseado no tipo de pet e nível de atividade */}
-                <div className="mt-6">
-                    <Card className="animate-slideIn opacity-0 shadow-md hover:shadow-lg transition-shadow duration-300" style={{ animationDelay: '0.6s', borderTop: '4px solid', borderColor: summary.activityLevel === "ALTO" ? "#3b82f6" : summary.activityLevel === "MODERADO" ? "#10b981" : "#f59e0b" }}>
-                        <CardContent className="p-6">
-                            {selectedPet.id === 1 ? (
-                                <div className="text-sm">
-                                    <h3 className="font-bold mb-2">Sobre a atividade de {selectedPet.name}:</h3>
-                                    <p className="mb-2">
-                                        Como uma cachorra {selectedPet.info.raca} de {selectedPet.info.idade} com <span className={`font-bold ${summary.activityLevel === "ALTO" ? "text-blue-600" :
-                                            summary.activityLevel === "MODERADO" ? "text-green-600" : "text-amber-600"
-                                            }`}>{summary.activityLevel}</span> nível de atividade
-                                        ({summary.activePercentage}% do tempo) e peso de {selectedPet.info.peso}, {selectedPet.name} {
-                                            summary.activityLevel === "ALTO" ? "está com bom nível de atividade, continue assim!" :
-                                                "poderia se beneficiar de mais atividades físicas diárias."
-                                        }
-                                    </p>
-                                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        {summary.activityLevel === "ALTO" ? (
-                                            <>
-                                                <li>Continue com os passeios diários: 2-3 vezes por dia, mantendo o ritmo atual</li>
-                                                <li>Tempo ideal ao ar livre: cerca de 2 horas por dia, como você já vem fazendo</li>
-                                                <li>Atividades diversificadas: explore novos locais de passeio para manter o interesse</li>
-                                            </>
-                                        ) : summary.activityLevel === "MODERADO" ? (
-                                            <>
-                                                <li>Aumente gradualmente os passeios: tente 2-3 vezes por dia para cachorro de {selectedPet.info.peso}</li>
-                                                <li>Tempo recomendado ao ar livre: pelo menos 1,5 horas por dia</li>
-                                                <li>Introduza brincadeiras mais intensas durante os passeios para estimular mais atividade</li>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <li>Incremente urgentemente os passeios: comece com 2 vezes por dia, aumentando a duração</li>
-                                                <li>Tempo mínimo ao ar livre: pelo menos 1 hora por dia para melhorar o condicionamento</li>
-                                                <li>Consulte um veterinário: níveis baixos de atividade podem indicar problemas de saúde</li>
-                                            </>
-                                        )}
-                                        <li>Brincadeiras adequadas: jogos de buscar, correr e outras atividades para {selectedPet.info.raca}</li>
-                                    </ul>
-                                </div>
-                            ) : selectedPet.id === 3 ? (
-                                <div className="text-sm">
-                                    <h3 className="font-bold mb-2">Sobre a atividade de {selectedPet.name}:</h3>
-                                    <p className="mb-2">
-                                        Como um {selectedPet.info.raca} de {selectedPet.info.idade} com <span className={`font-bold ${summary.activityLevel === "ALTO" ? "text-blue-600" :
-                                            summary.activityLevel === "MODERADO" ? "text-green-600" : "text-amber-600"
-                                            }`}>{summary.activityLevel}</span> nível de atividade
-                                        ({summary.activePercentage}% do tempo) e peso de {selectedPet.info.peso}, {selectedPet.name} {
-                                            summary.activityLevel === "ALTO" ? "está muito ativo, ótimo trabalho!" :
-                                                summary.activityLevel === "MODERADO" ? "está com um bom equilíbrio de atividade." :
-                                                    "precisa de mais estímulo para atividades."
-                                        }
-                                    </p>
-                                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        {summary.activityLevel === "ALTO" ? (
-                                            <>
-                                                <li>Mantenha os passeios: o nível atual está excelente para um {selectedPet.info.raca}</li>
-                                                <li>Controle de energia: intercale com períodos de descanso apropriados</li>
-                                                <li>Monitoramento de peso: mesmo com alta atividade, monitore o peso de {selectedPet.info.peso}</li>
-                                            </>
-                                        ) : summary.activityLevel === "MODERADO" ? (
-                                            <>
-                                                <li>Mantenha os passeios diários: 2 vezes por dia está adequado para seu nível atual</li>
-                                                <li>Tempo ao ar livre: cerca de 1 hora por dia, ideal para {selectedPet.info.raca}</li>
-                                                <li>Exercícios específicos: natação e buscar são ótimas opções para Golden Retrievers</li>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <li>Aumente os passeios diários: tente 2 vezes por dia, consistentemente</li>
-                                                <li>Consulte um veterinário: o baixo nível de atividade pode ser incomum para um {selectedPet.info.raca}</li>
-                                                <li>Introduza novos estímulos: brinquedos e exercícios que despertem seu interesse</li>
-                                            </>
-                                        )}
-                                        <li>Monitoramento de peso: importante para um {selectedPet.info.raca} de {selectedPet.info.idade}, manter entre 25-34kg</li>
-                                    </ul>
-                                </div>
-                            ) : (
-                                <div className="text-sm">
-                                    <h3 className="font-bold mb-2">Sobre a atividade de {selectedPet.name}:</h3>
-                                    <p className="mb-2">
-                                        Como um gato {selectedPet.info.raca} de {selectedPet.info.idade} com <span className={`font-bold ${summary.activityLevel === "ALTO" ? "text-blue-600" :
-                                            summary.activityLevel === "MODERADO" ? "text-green-600" : "text-purple-600"
-                                            }`}>{summary.activityLevel}</span> nível de atividade
-                                        ({summary.activePercentage}% do tempo) e peso de {selectedPet.info.peso}, {selectedPet.name} {
-                                            summary.activityLevel === "ALTO" ? "está surpreendentemente ativo para um gato!" :
-                                                summary.activityLevel === "MODERADO" ? "tem um bom nível de atividade para um gato." :
-                                                    "está com um nível típico de gatos, que tendem a ser menos ativos."
-                                        }
-                                    </p>
-                                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                                        <li>Padrão de atividade: mais ativo durante o amanhecer, entardecer e noite</li>
-                                        {summary.activityLevel === "ALTO" ? (
-                                            <li>Excelente atividade: continue oferecendo estímulos e brincadeiras interativas</li>
-                                        ) : summary.activityLevel === "MODERADO" ? (
-                                            <li>Bom nível: mantenha as brincadeiras diárias para manter esse padrão</li>
-                                        ) : (
-                                            <li>Estimule mais atividade: introduza brinquedos interativos e sessões de brincadeira</li>
-                                        )}
-                                        <li>Controle de peso: {selectedPet.info.peso} está acima do ideal para um gato (em média 4-5kg) - considere mais atividades</li>
-                                        <li>Ambiente seguro: mantenha-o em casa para proteger contra perigos externos</li>
-                                        <li>Enriquecimento ambiental: brinquedos, arranhadores e pontos de observação elevados</li>
-                                    </ul>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-            </main>
-        </div>
+                {/* Informações adicionais */}
+                <Card className="shadow-md border-l-4 border-l-blue-500">
+                    <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                            </div>
+                            <div className="text-sm text-gray-700">
+                                <p className="font-medium mb-1">
+                                    {selectedPet.info.tipo.toLowerCase() === "cachorro"
+                                        ? `Rastreamento GPS de ${selectedPet.name}`
+                                        : `Monitoramento de ${selectedPet.name}`
+                                    }
+                                </p>                                <p>
+                                    {selectedPet.info.tipo.toLowerCase() === "cachorro"
+                                        ? `${selectedPet.name} está sendo monitorado no Parque Ibirapuera. O GPS atualiza a localização a cada 2-5 minutos durante os passeios.`
+                                        : `${selectedPet.name} está sendo monitorado em casa, próximo ao Parque Ibirapuera. O sistema registra os ambientes frequentados ao longo do dia.`
+                                    }
+                                </p>                                <p className="mt-2 text-xs text-blue-600">
+                                    💡 Ideal para passeios no parque! Mantenha o dispositivo GPS carregado para acompanhar toda a diversão.
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </PetLayout>
     );
 };
 
