@@ -126,7 +126,7 @@ export default function BottomNavigation() {
                 </div> */}
 
                 {/* Notifications */}
-                <div className="flex-1  flex items-center justify-center">
+                <div className="flex-1 flex items-center justify-center">
                     <Sheet>
                         <SheetTrigger asChild>
                             <Button
@@ -149,7 +149,7 @@ export default function BottomNavigation() {
                             </Button>
                         </SheetTrigger>
 
-                        <SheetContent side="right" className="w-[400px] sm:w-[540px]">
+                        <SheetContent side="right" className="w-[400px] sm:w-[540px] z-[9999]">
                             <SheetHeader>
                                 <div className="flex flex-col items-center justify-between">
                                     <div>
