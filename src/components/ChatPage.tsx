@@ -11,8 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PetLayout from "./PetLayout";
 
-// Removed: predefinedResponses array is no longer needed.
-
 interface Message {
   id: string;
   text: string;
@@ -95,8 +93,6 @@ const ChatPage: React.FC = () => {
       setMessages(prev => [...prev, errorMessage]);
     });
   };
-
-  // Removed: getBotResponse function is no longer needed.
 
   return (
     <PetLayout title="Chat PetCare" showBottomNavigation={false}>
