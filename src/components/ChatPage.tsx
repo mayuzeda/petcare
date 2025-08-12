@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import PetLayout from "./PetLayout";
+import { marked } from 'marked';
 
 interface Message {
   id: string;
@@ -20,18 +21,36 @@ interface Message {
 
 const ChatPage: React.FC = () => {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([
-    {
+
+  // NOVO: Inicializa o estado das mensagens lendo do localStorage
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const savedMessages = localStorage.getItem("chatMessages");
+    if (savedMessages) {
+      // Reconstitui o array de mensagens e converte timestamps de volta para Date
+      const parsedMessages: Message[] = JSON.parse(savedMessages);
+      return parsedMessages.map(msg => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+      }));
+    }
+    // Retorna a mensagem de boas-vindas se não houver histórico salvo
+    return [{
       id: "welcome",
       text: "Como posso te ajudar hoje?",
       sender: "bot",
       timestamp: new Date()
-    }
-  ]);
+    }];
+  });
+
   const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showAgentMessage, setShowAgentMessage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // NOVO: Salva as mensagens no localStorage sempre que elas são atualizadas
+  useEffect(() => {
+    localStorage.setItem("chatMessages", JSON.stringify(messages));
+  }, [messages]); // O useEffect é disparado a cada mudança no array de mensagens
 
   // Auto scroll para a última mensagem
   useEffect(() => {
@@ -52,11 +71,9 @@ const ChatPage: React.FC = () => {
     setInputMessage("");
     setIsTyping(true);
 
-    // Lógica para obter ou criar um ID de chat para o n8n
-    const chatId = sessionStorage.getItem("chatId") || "chat_" + Math.random().toString(36).substr(2, 9);
+    const chatId = sessionStorage.getItem("chatId") || "chat_" + Math.random().toString(36).substr(2, 2);
     sessionStorage.setItem("chatId", chatId);
 
-    // Chama o webhook do n8n
     fetch('http://localhost:5678/webhook/6cdef828-159a-412d-ae25-33c7df6024e5/chat', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,7 +85,6 @@ const ChatPage: React.FC = () => {
     })
     .then(res => res.json())
     .then(data => {
-      // Simula um atraso para dar tempo de exibir o "digitando"
       setTimeout(() => {
         setIsTyping(false);
         const botResponseText = data.output || "Desculpe, não entendi.";
@@ -100,7 +116,7 @@ const ChatPage: React.FC = () => {
         <div className="bg-green-100 px-2 py-1 rounded-full flex items-center justify-center mb-4 w-80">
           <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
           <span className="text-xs text-green-700">Online - Atendimento disponível</span>
-        </div>        
+        </div>        
         {/* Chat Area */}
         <div className="flex-1 bg-gray-50 overflow-y-auto p-4 pb-32 w-full">
           <div className="max-w-2xl mx-auto">
@@ -126,7 +142,10 @@ const ChatPage: React.FC = () => {
                         <CheckCircle className="h-3 w-3 ml-1" />
                       </div>
                     )}
-                    <p className="text-sm">{message.text}</p>
+                    <div
+                      className="text-sm"
+                      dangerouslySetInnerHTML={{ __html: marked.parse(message.text) }}
+                    />
                     <div
                       className={`text-xs mt-1 ${message.sender === "user" ? "text-blue-100" : "text-gray-500"
                       }`}
@@ -155,7 +174,7 @@ const ChatPage: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
           </div>
-        </div>        
+        </div>        
         {/* Input Area */}
         <div className="bg-white border-t border-gray-200 p-3 fixed bottom-0 left-0 right-0 z-50">
           <div className="max-w-2xl mx-auto">
