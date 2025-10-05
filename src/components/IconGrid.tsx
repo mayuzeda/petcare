@@ -8,7 +8,8 @@ import {
   MapPin,
   Stethoscope,
   Activity,
-  Bug
+  Bug,
+  HeartPlus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -18,9 +19,10 @@ const icons = [
   { id: 3, name: "Calendário", icon: Calendar, route: "/calendar" },
   { id: 4, name: "Exames", icon: Activity, route: "/exams" },
   { id: 5, name: "Consultas", icon: Stethoscope, route: "/appointments" },
-  { id: 6, name: "Vermífugo", icon: Bug, route: "/antiparasitic" },  { id: 7, name: "Atividade", icon: Gauge, route: "/activity" },
+  { id: 6, name: "Vermífugo", icon: Bug, route: "/antiparasitic" }, { id: 7, name: "Atividade", icon: Gauge, route: "/activity" },
   { id: 8, name: "GPS", icon: MapPin, route: "/gps" },
   { id: 9, name: "Documentos", icon: FileText, route: "/documents" },
+  { id: 10, name: "Telemedicina", icon: HeartPlus, route: "/telemedicine" },
 ];
 
 const IconGrid = () => {

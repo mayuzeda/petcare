@@ -12,6 +12,7 @@ import DocumentsPage from './components/DocumentsPage'
 import ChatPage from './components/ChatPage'
 import CalendarReminder from './components/CalendarReminder'
 import ActivityPage from './components/ActivityPage'
+import TelemedicinePage from './components/TelemedicinePage'
 import { Toaster } from './components/ui/toaster'
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
           <Route path="/gps" element={<GPSPage />} />
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/chat" element={<ChatPage />} />
+          <Route path="/telemedicine" element={<TelemedicinePage />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </Router>
