@@ -1,0 +1,24 @@
+{
+  "name": "petcare-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "API do PetCare: pets, agenda, telemetria da coleira, documentos e telemedicina",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "node --watch --disable-warning=ExperimentalWarning src/server.js",
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "seed": "node --disable-warning=ExperimentalWarning src/db/seed.js --reset",
+    "test": "node --disable-warning=ExperimentalWarning --test \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.4.3",
+    "@fastify/jwt": "^10.2.8",
+    "@fastify/static": "^10.1.11",
+    "fastify": "^5.12.8",
+    "zod": "^4.6.7"
+  }
+}

@@ -1,0 +1,33 @@
+name: petcare
+description: "PetCare - saúde e rotina do seu pet"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  material_ui: ^1.1.0
+  cupertino_icons: ^1.0.8
+  go_router: ^18.1.4
+  provider: ^6.1.5+1
+  http: ^1.6.0
+  shared_preferences: ^2.5.6
+  google_fonts: ^9.0.0
+  fl_chart: ^1.3.1
+  flutter_svg: ^2.4.0
+  intl: ^0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/brand/
+    - assets/pets/
